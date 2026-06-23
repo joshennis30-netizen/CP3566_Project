@@ -9,6 +9,14 @@ import com.example.fraud.repo.WatchlistRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.*;
+import java.math.*;
+import com.example.fraud.model.Alert;
+import com.example.fraud.model.AuditLog;
+import com.example.fraud.model.Case;
+import com.example.fraud.model.Rule;
+import com.example.fraud.model.Transaction;
+import com.example.fraud.model.Watchlist;
 
 /**
  * TODO (student) — THE RULE ENGINE.   PROJECT_BRIEF.html §4.3
@@ -61,7 +69,117 @@ public class RuleEngineService {
         //   5. R4 (bonus) — for one account, open a case if >= R4.minCount transfers of
         //           $9,000–$9,999 fall within R4.windowMinutes
         //   call openCase(...) for every hit, and count them.
-        return 0;
+
+        int cases = 0;
+
+        Map<String, Rule> ruleMap = new HashMap<>();
+        for (Rule R : ruleRepo.findAll()) {
+            if (R != null && R.getCode() != null) {
+                ruleMap.put(R.getCode(), R);
+            }
+        }
+
+        List<Transaction> transactionList = transactionRepo.findAll();
+
+
+        Rule R1 = ruleMap.get("R1");
+        if (R1 != null && R1.isEnabled() && R1.getThresholdAmount() != null) {
+            BigDecimal thresholdAmount = R1.getThresholdAmount();
+            for (Transaction trans : transactionList) {
+                if (trans != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) >= 0) {
+                    String amount = "Amount " + trans.getAmount().toPlainString() + " >= " + thresholdAmount.toPlainString();
+                    LocalDateTime when = trans.getOccuredAt() : LocalDateTime.now();
+                    openCase(trans.getId(), "R1", detail, when);
+                    cases++;
+                }
+            }
+        }
+
+        Rule R3 = ruleMap.get("R3");
+        if (R3 != null && R3.isEnabled()) {
+            Set<String> watchlists = new HashSet<>();
+            for (watchList W : watchlistRepo.findAll()) {
+                if (W != null && W.getName() != null) {
+                    watchlists.add(W.getName().toLowerCase().trim());
+                }
+            }
+            if (!watchlists.isEmpty()) {
+                for (Transaction trans : transactionList) {
+                    if (trans != null && trans.getCounterparty() != null && watchlists.contains(trans.getCounterparty().toLowerCase).trim())) {
+                        String countParty = "Counterparty " + trans.getCounterparty() + " is on the watchlist";
+                        LocalDateTime when = trans.getOccuredAt() : LocalDateTime.now();
+                        openCase(trans.getId(), "R3", countParty, when);
+                        cases++;
+                    }
+                }
+            }
+        }
+
+        Rule R2 = ruleMap.get("R2");
+        if (R2 != null && R2.isEnabled() && R2.getMinCount() > 0) {
+            int windowMinutes = R2.getWindowMinutes();
+            int minCount = R2.getMinCount();
+
+            Map<Long, List<Transaction>> accounts = new HashMap<>();
+            for (Transaction trans : transactionList) {
+                if (trans != null && trans.getAccountId != null) {
+                    accounts.computeIfAbsent(trans.getAccountId(), key -> new ArrayList<>()).add(trans);
+                }
+            }
+            for (Map.Entry<Long, List<Transaction>> entry : accounts.entrySet()) {
+                List<Transaction> transact = entry.getValue();
+                transact.sort((time1, time2) -> time1.getOccuredAt().compareTo(time2.getOccuredAt()));
+                for (int i = 0; i < transact.size(); i++) {
+                    LocalDateTime startTime = transact.get(i).getOccuredAt();
+                    LocalDateTime endTime = startTime.plusMinutes(windowMinutes);
+                    int transCount = 0;
+                    for (Transaction trans : transact) {
+                        if (!trans.getOccuredAt().isBefore(startTime) && !trans.getOccuredAt().isAfter(endTime)) {
+                            transCount++;
+                        }
+                    }
+                    if (transCount >= minCount) {
+                        String within = transCount + " transactions within " + windowMinutes + " minutes";
+                        openCase(transact.get(i).getId(), "R2", within, startTime);
+                        cases++;
+                    }
+                }
+            }
+        }
+
+        Rule R4 = ruleMap.get("R4");
+        if (R4 != null && R4.isEnabled() && R4.getMinCount > 0 && R4.getThresholdAmount() != null) {
+            int minCount = R4.getMinCount();
+            int windowMinutes = R4.getWindowMinutes();
+            BigDecimal thresholdAmount = R4.getThresholdAmount();
+            Map<Long, List<Transaction>> accounts = new HashMap<>();
+            for (Transaction trans : transactionList) {
+                if (trans != null && trans.getOccuredAt() != null && trans.getAccountId() != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) < 0) {
+                    accounts.computeIfAbsent(trans.getAccountId(), key -> new ArrayList<>()).add(trans);
+                }
+            }
+            for (Map.Entry<Long, List<Transaction>> account : accounts.entrySet()) {
+                List<Transaction> transact = account.getValue();
+                transact.sort((time1, time2) -> time1.getOccuredAt().compareTo(time2.getOccuredAt()));
+
+                for (int i = 0; i < transact.size(); i++) {
+                    LocalDateTime startTime = transact.get(i).getOccuredAt();
+                    LocalDateTime endTime = startTime.plusMinutes(windowMinutes);
+                    int transCount = 0;
+                    for (Transaction trans : transactionList) {
+                        if (!trans.getOccuredAt().isBefore(startTime) && !trans.getOccuredAt().isAfter(endTime)) {
+                            transCount++;
+                        }
+                    }
+                    if (transCount >= minCount) {
+                        String within = transCount + " transactions within " + windowMinutes + " minutes";
+                        openCase(transact.get(i).getId(), "R4", within, startTime);
+                        cases++;
+                    }
+                }
+            }
+        }
+        return cases;
     }
 
     /**
@@ -75,5 +193,13 @@ public class RuleEngineService {
         // TODO (student): save a new Alert(transactionId, ruleCode, detail, when) with alertRepo,
         //   then a new Case(alertId, "NEW", null, when) with caseRepo,
         //   then an AuditLog row ("system", "OPEN_CASE", "case", caseId, ...) with auditLogRepo.
+        Alert alert = new Alert(transactionId, ruleCode, detail, when);
+        alert = alertRepo.save(alert);
+
+        Case case = new Case(alert.getId(), "NEW", null, when);
+        Case caseSave = caseRepo.save(case);
+
+        AuditLog audLog = new AuditLog("system", "OPEN_CASE", "case", caseSave.getId()), "Rule " + ruleCode, when);
+            auditLogRepo.save(audLog);
     }
 }
