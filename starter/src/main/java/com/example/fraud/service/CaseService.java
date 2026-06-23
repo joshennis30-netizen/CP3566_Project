@@ -47,6 +47,93 @@ public class CaseService {
         //   3. is `actorRole` allowed to make that move? if not -> throw 403
         //   4. set the new status (and assignedTo on pickup), then save the case
         //   5. write one audit_log row with auditLogRepo, then return the updated case
-        throw new UnsupportedOperationException("TODO: implement the case workflow (see PROJECT_BRIEF.html §4.4)");
+
+        Case case = caseRepo.findById(caseId)
+                .orElseThrow(() -> new CaseNotFoundException("Case with id " + caseId + " missing.");
+
+        String currentStatus = case.getStatus();
+        String status = null;
+
+        switch (action) {
+            case "pickup":
+                if ("NEW".equals(currentStatus)) {
+                    status = "REVIEWING";
+                } else {
+                    throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+                }
+                break;
+
+            case "escalate":
+                if ("REVIEWING".equals(currentStatus)) {
+                    status = "ESCALATED";
+                } else {
+                    throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+                }
+                break;
+
+            case "send-back":
+                if ("ESCALATED".equals(currentStatus)) {
+                    status = "REVIEWING";
+                } else {
+                    throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+                }
+                break;
+
+            case "close-false":
+                if ("REVIEWING".equals(currentStatus || "ESCALATED".equals(currentStatus))) {
+                    status = "CLOSED_FALSE";
+                } else {
+                    throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+                }
+                break;
+
+            case "close-fraud":
+                if ("ESCALATED".equals(currentStatus)) {
+                    status = "CLOSED_FRAUD";
+                } else {
+                    throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+                }
+                break;
+
+            default:
+                throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
+        }
+
+        String role = actorRole.trim();
+        boolean correctRole;
+        switch (action) {
+            case "pickup":
+                correctRole = "ANALYST".equals(role) || "ADMIN".equals(role);
+                break;
+            case "escalate":
+                correctRole = "ANALYST".equals(role) || "ADMIN".equals(role);
+                break;
+            case "send-back":
+                correctRole = "INVESTIGATOR".equals(role) || "ADMIN".equals(role);
+                break;
+            case "close-fraud":
+                if ("REVIEWING".equals(currentStatus)) {
+                    correctRole = "ANALYST".equals(role) || "ADMIN".equals(role);
+                } else {
+                    correctRole = "INVESTIGATOR".equals(role) || "ADMIN".equals(role);
+                }
+                break;
+            case "close-fraud":
+                correctRole = "INVESTIGATOR".equals(role) || "ADMIN".equals(role);
+                break;
+            default:
+                correctRole = false;
+        }
+
+        case.setStatus(status);
+        if ("pickup".equals(action)) {
+            case.setAssignedTo(actorUsername);
+        }
+        Case caseSave = caseRepo.save(case);
+
+        AuditLog audLog = new AuditLog(actorUsername, action, "case", caseSave.getId(), "Status: " + status, LocalDateTime.now());
+        auditLogRepo.save(audLog);
+
+        return caseSave;
     }
 }
