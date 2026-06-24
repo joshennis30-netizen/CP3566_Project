@@ -124,6 +124,9 @@ public class CaseService {
             default:
                 correctRole = false;
         }
+        if (!correctRole) {
+            throw new IllegalStateException(role + " is not allowed to perform " + action);
+        }
 
         case.setStatus(status);
         if ("pickup".equals(action)) {
