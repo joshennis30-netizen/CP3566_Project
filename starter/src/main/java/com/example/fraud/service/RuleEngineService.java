@@ -88,8 +88,8 @@ public class RuleEngineService {
             for (Transaction trans : transactionList) {
                 if (trans != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) >= 0) {
                     String amount = "Amount " + trans.getAmount().toPlainString() + " >= " + thresholdAmount.toPlainString();
-                    LocalDateTime when = trans.getOccuredAt() : LocalDateTime.now();
-                    openCase(trans.getId(), "R1", detail, when);
+                    LocalDateTime when = trans.getOccuredAt();
+                    openCase(trans.getId(), "R1", amount, when);
                     cases++;
                 }
             }
@@ -98,16 +98,17 @@ public class RuleEngineService {
         Rule R3 = ruleMap.get("R3");
         if (R3 != null && R3.isEnabled()) {
             Set<String> watchlists = new HashSet<>();
-            for (watchList W : watchlistRepo.findAll()) {
+            for (Watchlist W : watchlistRepo.findAll()) {
                 if (W != null && W.getName() != null) {
                     watchlists.add(W.getName().toLowerCase().trim());
                 }
             }
             if (!watchlists.isEmpty()) {
                 for (Transaction trans : transactionList) {
-                    if (trans != null && trans.getCounterparty() != null && watchlists.contains(trans.getCounterparty().toLowerCase).trim())) {
+                    if (trans != null && trans.getCounterparty() != null &&
+                            watchlists.contains(trans.getCounterparty())) {
                         String countParty = "Counterparty " + trans.getCounterparty() + " is on the watchlist";
-                        LocalDateTime when = trans.getOccuredAt() : LocalDateTime.now();
+                        LocalDateTime when = trans.getOccuredAt();
                         openCase(trans.getId(), "R3", countParty, when);
                         cases++;
                     }
@@ -122,7 +123,7 @@ public class RuleEngineService {
 
             Map<Long, List<Transaction>> accounts = new HashMap<>();
             for (Transaction trans : transactionList) {
-                if (trans != null && trans.getAccountId != null) {
+                if (trans != null && trans.getAccountId() != null) {
                     accounts.computeIfAbsent(trans.getAccountId(), key -> new ArrayList<>()).add(trans);
                 }
             }
@@ -148,7 +149,7 @@ public class RuleEngineService {
         }
 
         Rule R4 = ruleMap.get("R4");
-        if (R4 != null && R4.isEnabled() && R4.getMinCount > 0 && R4.getThresholdAmount() != null) {
+        if (R4 != null && R4.isEnabled() && R4.getMinCount() > 0 && R4.getThresholdAmount() != null) {
             int minCount = R4.getMinCount();
             int windowMinutes = R4.getWindowMinutes();
             BigDecimal thresholdAmount = R4.getThresholdAmount();
@@ -196,10 +197,10 @@ public class RuleEngineService {
         Alert alert = new Alert(transactionId, ruleCode, detail, when);
         alert = alertRepo.save(alert);
 
-        Case case = new Case(alert.getId(), "NEW", null, when);
-        Case caseSave = caseRepo.save(case);
+        Case case1 = new Case(alert.getId(), "NEW", null, when);
+        Case caseSave = caseRepo.save(case1);
 
-        AuditLog audLog = new AuditLog("system", "OPEN_CASE", "case", caseSave.getId()), "Rule " + ruleCode, when);
+        AuditLog audLog = new AuditLog("system", "OPEN_CASE", "case", caseSave.getId(), "Rule " + ruleCode, when);
             auditLogRepo.save(audLog);
     }
 }

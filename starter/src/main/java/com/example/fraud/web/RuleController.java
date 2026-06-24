@@ -4,10 +4,11 @@ import com.example.fraud.model.Rule;
 import com.example.fraud.repo.RuleRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Map;
-import java.util.BigDecimal;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/rules")
@@ -32,7 +33,8 @@ public class RuleController {
                 .orElse("");
 
         if (!"ADMIN".equals(role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("Only the admin can update the rules."));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("ERROR", "Only the admin can update the rules."));
         }
 
         Rule rule = ruleRepo.findById(code).orElseThrow(() -> new IllegalStateException("Rule " + code + " not found"));

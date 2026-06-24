@@ -25,13 +25,10 @@ public class AuthController {
         String username = body.get("username");
         String password = body.get("password");
 
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-
-        if (!passwordEncode.matches(password, user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (username == null || password == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED);
         }
 
-        return user;
+        return userRepo.findByUsername(username);
     }
 }

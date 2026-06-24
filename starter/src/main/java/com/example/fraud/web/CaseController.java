@@ -8,6 +8,7 @@ import com.example.fraud.service.CaseService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 import java.util.List;
@@ -28,7 +29,7 @@ public class CaseController {
     }
 
     @GetMapping
-    public List<case> listCase(@RequestParam(required = false) String status) {
+    public List<Case> listCase(@RequestParam(required = false) String status) {
         if (status == null || status.isBlank()) {
             return caseRepo.findAll();
         }
@@ -71,7 +72,7 @@ public class CaseController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ID not found."));
 
         String note = body.get("text");
-        AuditLog audLog = new AuditLog(auth.getName(), "NOTE", "case", id, text, LocalDateTime.now());
+        AuditLog audLog = new AuditLog(auth.getName(), "NOTE", "case", id, note, LocalDateTime.now());
         auditLogRepo.save(audLog);
     }
 }

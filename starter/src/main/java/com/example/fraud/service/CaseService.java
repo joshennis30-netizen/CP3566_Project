@@ -1,9 +1,14 @@
 package com.example.fraud.service;
 
 import com.example.fraud.model.Case;
+import com.example.fraud.model.AuditLog;
 import com.example.fraud.repo.AuditLogRepository;
 import com.example.fraud.repo.CaseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.http.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
 
 /**
  * TODO (student) — THE CASE WORKFLOW (state machine).   PROJECT_BRIEF.html §4.4
@@ -48,10 +53,10 @@ public class CaseService {
         //   4. set the new status (and assignedTo on pickup), then save the case
         //   5. write one audit_log row with auditLogRepo, then return the updated case
 
-        Case case = caseRepo.findById(caseId)
-                .orElseThrow(() -> new CaseNotFoundException("Case with id " + caseId + " missing.");
+        Case caseFraud = caseRepo.findById(caseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case wasn't found."));
 
-        String currentStatus = case.getStatus();
+        String currentStatus = caseFraud.getStatus();
         String status = null;
 
         switch (action) {
@@ -80,7 +85,9 @@ public class CaseService {
                 break;
 
             case "close-false":
-                if ("REVIEWING".equals(currentStatus || "ESCALATED".equals(currentStatus))) {
+                if ("REVIEWING".equals(currentStatus)) {
+                    status = "CLOSED_FALSE";
+                } else if ("ESCALATED".equals(currentStatus)) {
                     status = "CLOSED_FALSE";
                 } else {
                     throw new IllegalStateException("Illegal status " + currentStatus + " with action " + action);
@@ -118,9 +125,6 @@ public class CaseService {
                     correctRole = "INVESTIGATOR".equals(role) || "ADMIN".equals(role);
                 }
                 break;
-            case "close-fraud":
-                correctRole = "INVESTIGATOR".equals(role) || "ADMIN".equals(role);
-                break;
             default:
                 correctRole = false;
         }
@@ -128,11 +132,11 @@ public class CaseService {
             throw new IllegalStateException(role + " is not allowed to perform " + action);
         }
 
-        case.setStatus(status);
+        caseFraud.setStatus(status);
         if ("pickup".equals(action)) {
-            case.setAssignedTo(actorUsername);
+            caseFraud.setAssignedTo(actorUsername);
         }
-        Case caseSave = caseRepo.save(case);
+        Case caseSave = caseRepo.save(caseFraud);
 
         AuditLog audLog = new AuditLog(actorUsername, action, "case", caseSave.getId(), "Status: " + status, LocalDateTime.now());
         auditLogRepo.save(audLog);
