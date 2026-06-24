@@ -32,11 +32,6 @@ public class RuleController {
                 .map(author -> author.getAuthority().replace("ROLE_", ""))
                 .orElse("");
 
-        if (!"ADMIN".equals(role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("ERROR", "Only the admin can update the rules."));
-        }
-
         Rule rule = ruleRepo.findById(code).orElseThrow(() -> new IllegalStateException("Rule " + code + " not found"));
 
         if (update.containsKey("thresholdAmount")) {

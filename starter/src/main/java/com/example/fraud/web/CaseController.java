@@ -21,6 +21,7 @@ public class CaseController {
     private final CaseRepository caseRepo;
     private final CaseService caseService;
     private final AuditLogRepository auditLogRepo;
+    private final AuthController auth;
 
     public CaseController(CaseRepository caseRepo, CaseService caseService, AuditLogRepository auditLogRepo) {
         this.caseRepo = caseRepo;

@@ -3,6 +3,7 @@ package com.example.fraud.web;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import com.example.fraud.repo.UserRepository;
+import com.example.fraud.model.User;
 import org.springframework.security.crypto.password.*;
 
 import java.util.Map;
@@ -20,10 +21,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         String password = body.get("password");
 
-        return userRepo.findByUsername(username);
+        User user = userRepo.findByUsername(username);
+        return user;
     }
 }
