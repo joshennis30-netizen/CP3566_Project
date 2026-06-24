@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import com.example.fraud.repo.UserRepository;
 import org.springframework.security.crypto.password.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -24,10 +23,6 @@ public class AuthController {
     public Map<String, String> login(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         String password = body.get("password");
-
-        if (username == null || password == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED);
-        }
 
         return userRepo.findByUsername(username);
     }

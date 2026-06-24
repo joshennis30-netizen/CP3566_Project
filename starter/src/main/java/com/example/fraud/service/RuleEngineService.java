@@ -88,7 +88,7 @@ public class RuleEngineService {
             for (Transaction trans : transactionList) {
                 if (trans != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) >= 0) {
                     String amount = "Amount " + trans.getAmount().toPlainString() + " >= " + thresholdAmount.toPlainString();
-                    LocalDateTime when = trans.getOccuredAt();
+                    LocalDateTime when = trans.getOccurredAt();
                     openCase(trans.getId(), "R1", amount, when);
                     cases++;
                 }
@@ -108,7 +108,7 @@ public class RuleEngineService {
                     if (trans != null && trans.getCounterparty() != null &&
                             watchlists.contains(trans.getCounterparty())) {
                         String countParty = "Counterparty " + trans.getCounterparty() + " is on the watchlist";
-                        LocalDateTime when = trans.getOccuredAt();
+                        LocalDateTime when = trans.getOccurredAt();
                         openCase(trans.getId(), "R3", countParty, when);
                         cases++;
                     }
@@ -129,13 +129,13 @@ public class RuleEngineService {
             }
             for (Map.Entry<Long, List<Transaction>> entry : accounts.entrySet()) {
                 List<Transaction> transact = entry.getValue();
-                transact.sort((time1, time2) -> time1.getOccuredAt().compareTo(time2.getOccuredAt()));
+                transact.sort((time1, time2) -> time1.getOccurredAt().compareTo(time2.getOccurredAt()));
                 for (int i = 0; i < transact.size(); i++) {
-                    LocalDateTime startTime = transact.get(i).getOccuredAt();
+                    LocalDateTime startTime = transact.get(i).getOccurredAt();
                     LocalDateTime endTime = startTime.plusMinutes(windowMinutes);
                     int transCount = 0;
                     for (Transaction trans : transact) {
-                        if (!trans.getOccuredAt().isBefore(startTime) && !trans.getOccuredAt().isAfter(endTime)) {
+                        if (!trans.getOccurredAt().isBefore(startTime) && !trans.getOccurredAt().isAfter(endTime)) {
                             transCount++;
                         }
                     }
@@ -155,20 +155,20 @@ public class RuleEngineService {
             BigDecimal thresholdAmount = R4.getThresholdAmount();
             Map<Long, List<Transaction>> accounts = new HashMap<>();
             for (Transaction trans : transactionList) {
-                if (trans != null && trans.getOccuredAt() != null && trans.getAccountId() != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) < 0) {
+                if (trans != null && trans.getOccurredAt() != null && trans.getAccountId() != null && trans.getAmount() != null && trans.getAmount().compareTo(thresholdAmount) < 0) {
                     accounts.computeIfAbsent(trans.getAccountId(), key -> new ArrayList<>()).add(trans);
                 }
             }
             for (Map.Entry<Long, List<Transaction>> account : accounts.entrySet()) {
                 List<Transaction> transact = account.getValue();
-                transact.sort((time1, time2) -> time1.getOccuredAt().compareTo(time2.getOccuredAt()));
+                transact.sort((time1, time2) -> time1.getOccurredAt().compareTo(time2.getOccurredAt()));
 
                 for (int i = 0; i < transact.size(); i++) {
-                    LocalDateTime startTime = transact.get(i).getOccuredAt();
+                    LocalDateTime startTime = transact.get(i).getOccurredAt();
                     LocalDateTime endTime = startTime.plusMinutes(windowMinutes);
                     int transCount = 0;
                     for (Transaction trans : transactionList) {
-                        if (!trans.getOccuredAt().isBefore(startTime) && !trans.getOccuredAt().isAfter(endTime)) {
+                        if (!trans.getOccurredAt().isBefore(startTime) && !trans.getOccurredAt().isAfter(endTime)) {
                             transCount++;
                         }
                     }
